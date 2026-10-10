@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b0614"/><stop offset=".55" stop-color="#2a0f3d"/><stop offset="1" stop-color="#4c1d95"/>
+    </linearGradient>
+    <linearGradient id="txt" x1="0" x2="1">
+      <stop offset="0" stop-color="#f472b6"/><stop offset=".5" stop-color="#c4b5fd"/><stop offset="1" stop-color="#60a5fa"/>
+      <animate attributeName="x1" values="-1;1" dur="5s" repeatCount="indefinite"/>
+      <animate attributeName="x2" values="0;2" dur="5s" repeatCount="indefinite"/>
+    </linearGradient>
+    <linearGradient id="c1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f472b6"/><stop offset="1" stop-color="#7c3aed"/></linearGradient>
+    <linearGradient id="c2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#4338ca"/></linearGradient>
+    <linearGradient id="c3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#db2777"/></linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#ec4899" stop-opacity=".4"/><stop offset="1" stop-color="#ec4899" stop-opacity="0"/></radialGradient>
+  </defs>
+
+  <rect width="1200" height="320" fill="url(#bg)"/>
+  <circle cx="930" cy="160" r="240" fill="url(#glow)"/>
+
+  <!-- kelopak sakura jatuh -->
+  <g fill="#f9a8d4" opacity=".7">
+    <ellipse cx="0" cy="0" rx="6" ry="3.5"><animateMotion path="M120 -10 C 160 100, 80 200, 140 340" dur="9s" repeatCount="indefinite"/><animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="3s" repeatCount="indefinite" additive="sum"/></ellipse>
+    <ellipse cx="0" cy="0" rx="5" ry="3"><animateMotion path="M560 -10 C 600 120, 520 220, 590 340" dur="11s" begin="2s" repeatCount="indefinite"/></ellipse>
+    <ellipse cx="0" cy="0" rx="6" ry="3.5"><animateMotion path="M720 -10 C 680 90, 760 210, 700 340" dur="10s" begin="4s" repeatCount="indefinite"/></ellipse>
+    <ellipse cx="0" cy="0" rx="4" ry="2.5"><animateMotion path="M1120 -10 C 1080 100, 1160 200, 1100 340" dur="8s" begin="1s" repeatCount="indefinite"/></ellipse>
+    <ellipse cx="0" cy="0" rx="5" ry="3"><animateMotion path="M360 -10 C 400 130, 320 230, 380 340" dur="12s" begin="5s" repeatCount="indefinite"/></ellipse>
+  </g>
+
+  <!-- teks -->
+  <text x="70" y="98" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" fill="#f9a8d4" letter-spacing="4">KATALOG ANIME</text>
+  <text x="66" y="178" font-family="Segoe UI, Arial, sans-serif" font-size="88" font-weight="900" fill="url(#txt)">▶ AnimeKu</text>
+  <text x="70" y="222" font-family="Segoe UI, Arial, sans-serif" font-size="26" fill="#e9d5ff">Trending • Jadwal Tayang • Favorit</text>
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#fff">
+    <rect x="70" y="246" width="88" height="34" rx="17" fill="#ffffff1f"/><text x="114" y="269" text-anchor="middle">React</text>
+    <rect x="168" y="246" width="128" height="34" rx="17" fill="#ffffff1f"/><text x="232" y="269" text-anchor="middle">TypeScript</text>
+    <rect x="306" y="246" width="104" height="34" rx="17" fill="#ffffff1f"/><text x="358" y="269" text-anchor="middle">AniList</text>
+  </g>
+
+  <!-- tumpukan poster -->
+  <g transform="rotate(-10 820 170)">
+    <rect x="745" y="70" width="140" height="200" rx="16" fill="url(#c2)" opacity=".85"/>
+    <circle cx="815" cy="140" r="30" fill="#ffffff33"/>
+  </g>
+  <g transform="rotate(9 1040 170)">
+    <rect x="965" y="70" width="140" height="200" rx="16" fill="url(#c3)" opacity=".85"/>
+    <path d="M1000 230 l35 -60 l35 60z" fill="#ffffff33"/>
+  </g>
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="0 0;0 -8;0 0" dur="4s" repeatCount="indefinite"/>
+    <rect x="855" y="45" width="150" height="220" rx="18" fill="url(#c1)" stroke="#fff" stroke-opacity=".5" stroke-width="2"/>
+    <circle cx="930" cy="140" r="38" fill="#ffffff2e"/>
+    <path d="M918 122 l30 18 l-30 18z" fill="#fff"/>
+    <rect x="870" y="210" width="80" height="10" rx="5" fill="#ffffff66"/>
+    <rect x="870" y="228" width="50" height="8" rx="4" fill="#ffffff40"/>
+    <rect x="945" y="56" width="50" height="24" rx="12" fill="#00000066"/>
+    <text x="970" y="73" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#fde047" text-anchor="middle">★ 9.1</text>
+  </g>
+</svg>
