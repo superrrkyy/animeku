@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import {
-  AnimeDetail, countdown, dateLabel, fmt, getDetail, seasonLabel, sourceLabel, statusLabel, title,
+  AnimeDetail, countdown, dateLabel, epNo, epTitle, fmt, getDetail, seasonLabel, sourceLabel, statusLabel, title,
 } from "../api";
 import { Card, ErrorBox } from "../components/Card";
-import { toggleFav, useFavs } from "../store";
+import { clearProgress, markAll, markUpTo, toggleEpisode, toggleFav, useFavs, useProgress } from "../store";
 
 export default function Detail({ id }: { id: number }) {
   const [a, setA] = useState<AnimeDetail | null>(null);
@@ -30,6 +30,14 @@ export default function Detail({ id }: { id: number }) {
   const accent = a.coverImage.color ?? "#ec4899";
   const desc = (a.description ?? "Belum ada sinopsis.").replace(/<br\s*\/?>/g, "\n").replace(/<[^>]+>/g, "");
   const recs = a.recommendations.nodes.map(n => n.mediaRecommendation).filter(Boolean) as AnimeDetail[];
+
+  // situs streaming resmi (tanpa duplikat)
+  const streamLinks = (a.externalLinks ?? []).reduce<{ site: string; url: string }[]>((acc, l) => {
+    if (l.type !== "STREAMING" || !l.url || !l.site) return acc;
+    if (acc.some(x => x.site === l.site)) return acc;
+    acc.push({ site: l.site, url: l.url });
+    return acc;
+  }, []);
 
   const info: [string, string][] = [
     ["Format", fmt(a.format)],
@@ -101,6 +109,27 @@ export default function Detail({ id }: { id: number }) {
         {a.genres.map(g => <span key={g} className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs">{g}</span>)}
       </div>
 
+      {/* tonton di situs resmi */}
+      {streamLinks.length > 0 && (
+        <section className="mt-6">
+          <h2 className="mb-2 text-lg font-bold">▶️ Tonton di</h2>
+          <div className="flex flex-wrap gap-2">
+            {streamLinks.map(l => (
+              <a key={l.site + l.url} href={l.url} target="_blank" rel="noopener"
+                className="rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold transition active:scale-95">
+                {l.site} ↗
+              </a>
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-white/40">
+            Link menuju <b>situs streaming resmi</b>. Sebagian perlu berlangganan atau belum tersedia di Indonesia.
+          </p>
+        </section>
+      )}
+
+      {/* daftar episode + pelacak progres */}
+      <Episodes a={a} />
+
       {/* sinopsis */}
       <section className="mt-6">
         <h2 className="mb-2 text-lg font-bold">📖 Sinopsis</h2>
@@ -149,6 +178,136 @@ export default function Detail({ id }: { id: number }) {
 
       <p className="mt-6 text-center text-xs text-white/30">Sinopsis dari AniList (bahasa Inggris)</p>
     </div>
+  );
+}
+
+/**
+ * Daftar episode + pelacak progres.
+ * AnimeKu TIDAK menyimpan/memutar video — setiap episode hanya menautkan ke
+ * situs streaming resmi yang datanya diberikan oleh AniList.
+ */
+function Episodes({ a }: { a: AnimeDetail }) {
+  const p = useProgress(a.id);
+  const watched = new Set(p?.watched ?? []);
+  const [showAll, setShowAll] = useState(false);
+
+  const meta = { id: a.id, title: title(a), cover: a.coverImage.large, total: a.episodes ?? 0 };
+
+  const eps = (a.streamingEpisodes ?? [])
+    .map((e, i) => ({ n: epNo(e.title, i + 1), t: epTitle(e.title), thumb: e.thumbnail, url: e.url, site: e.site }))
+    .filter((e): e is { n: number; t: string; thumb: string | null; url: string; site: string | null } => !!e.url)
+    .sort((x, y) => x.n - y.n)
+    .filter((e, i, arr) => arr.findIndex(z => z.n === e.n) === i);
+
+  const lastStream = eps.length ? eps[eps.length - 1].n : 0;
+  const total = a.episodes && a.episodes > 0
+    ? a.episodes
+    : lastStream || (a.nextAiringEpisode ? Math.max(1, a.nextAiringEpisode.episode - 1) : 12);
+  const count = watched.size;
+  const pct = Math.min(100, Math.round((count / Math.max(1, total)) * 100));
+
+  const allNums = Array.from({ length: Math.max(total, lastStream) }, (_, i) => i + 1);
+  const nextN = allNums.find(n => !watched.has(n));
+  const nextLink = nextN ? eps.find(e => e.n === nextN) : undefined;
+
+  return (
+    <section className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg font-bold">📺 Episode</h2>
+        <span className="text-xs text-white/50">{count} / {total} ditonton</span>
+      </div>
+
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+        <div className="h-full rounded-full bg-gradient-to-r from-pink-500 to-violet-600 transition-all duration-500"
+          style={{ width: `${pct}%` }} />
+      </div>
+
+      {nextN != null && (
+        <div className="mt-3 flex gap-2">
+          {nextLink && (
+            <a href={nextLink.url} target="_blank" rel="noopener"
+              className="flex-1 rounded-xl bg-gradient-to-r from-pink-500 to-violet-600 py-2.5 text-center text-sm font-semibold transition active:scale-95">
+              ▶ Nonton Episode {nextN}
+            </a>
+          )}
+          <button onClick={() => markUpTo(meta, nextN)}
+            className="rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold transition active:scale-95">
+            ✓ s/d Ep {nextN}
+          </button>
+        </div>
+      )}
+
+      {eps.length > 0 ? (
+        <>
+          <div className="mt-3 space-y-2">
+            {(showAll ? eps : eps.slice(0, 10)).map(e => {
+              const done = watched.has(e.n);
+              return (
+                <div key={e.n}
+                  className={`flex items-center gap-3 rounded-xl border p-2 transition ${done ? "border-emerald-400/40 bg-emerald-400/10" : "border-white/10 bg-black/20"}`}>
+                  <a href={e.url} target="_blank" rel="noopener" className="relative block w-24 shrink-0">
+                    {e.thumb
+                      ? <img src={e.thumb} alt="" loading="lazy" className="aspect-video w-24 rounded-lg object-cover" />
+                      : <div className="grid aspect-video w-24 place-items-center rounded-lg bg-white/10 text-lg">▶</div>}
+                    {done && <span className="absolute inset-0 grid place-items-center rounded-lg bg-black/55 text-lg">✅</span>}
+                  </a>
+                  <a href={e.url} target="_blank" rel="noopener" className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">Episode {e.n}</p>
+                    <p className="line-clamp-2 text-xs text-white/60">{e.t || `Buka di ${e.site ?? "situs resmi"}`}</p>
+                    <p className="mt-0.5 text-[10px] uppercase tracking-wide text-white/35">{e.site}</p>
+                  </a>
+                  <button onClick={() => toggleEpisode(meta, e.n)} aria-label={`Episode ${e.n}`}
+                    className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-base transition active:scale-90 ${done ? "bg-emerald-500 font-black text-black" : "bg-white/10"}`}>
+                    {done ? "✓" : "○"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {eps.length > 10 && (
+            <button onClick={() => setShowAll(s => !s)}
+              className="mt-3 w-full rounded-xl bg-white/5 py-2.5 text-sm font-semibold transition active:scale-95">
+              {showAll ? "Sembunyikan" : `Tampilkan semua ${eps.length} episode`}
+            </button>
+          )}
+
+          <p className="mt-2.5 text-[11px] leading-relaxed text-white/40">
+            Setiap episode membuka <b>situs streaming resmi</b> (Crunchyroll, Netflix, Bilibili TV, dll).
+            AnimeKu tidak menyimpan maupun menayangkan video apa pun.
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="mt-3 text-xs leading-relaxed text-white/50">
+            AniList belum menyediakan link episode untuk anime ini.
+            Kamu tetap bisa menandai progres nonton secara manual 👇
+          </p>
+          <div className="mt-3 grid grid-cols-6 gap-1.5 sm:grid-cols-10">
+            {allNums.slice(0, 300).map(n => {
+              const done = watched.has(n);
+              return (
+                <button key={n} onClick={() => toggleEpisode(meta, n)}
+                  className={`aspect-square rounded-lg text-xs font-bold transition active:scale-90 ${done ? "bg-emerald-500 text-black" : "bg-white/10 text-white/70"}`}>
+                  {n}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      <div className="mt-3 flex gap-2">
+        <button onClick={() => markAll(meta, allNums, true)}
+          className="flex-1 rounded-xl bg-white/10 py-2 text-xs font-semibold transition active:scale-95">
+          Tandai semua
+        </button>
+        <button onClick={() => clearProgress(a.id)}
+          className="flex-1 rounded-xl bg-white/10 py-2 text-xs font-semibold transition active:scale-95">
+          Reset progres
+        </button>
+      </div>
+    </section>
   );
 }
 
