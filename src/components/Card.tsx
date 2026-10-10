@@ -1,8 +1,9 @@
 import { Anime, countdown, fmt, title } from "../api";
-import { toggleFav, useFavs } from "../store";
+import { clearProgress, toggleFav, useFavs, useProgress, useProgressAll } from "../store";
 
 export function Card({ a, rank }: { a: Anime; rank?: number }) {
   const favs = useFavs();
+  const prog = useProgress(a.id);
   const isFav = favs.some(f => f.id === a.id);
   const accent = a.coverImage.color ?? "#a78bfa";
 
@@ -32,7 +33,10 @@ export function Card({ a, rank }: { a: Anime; rank?: number }) {
         )}
       </div>
       <h3 className="mt-2 line-clamp-2 text-sm font-semibold leading-snug">{title(a)}</h3>
-      <p className="text-xs text-white/50">{fmt(a.format)}{a.episodes ? ` • ${a.episodes} eps` : ""}</p>
+      <p className="text-xs text-white/50">
+        {fmt(a.format)}{a.episodes ? ` • ${a.episodes} eps` : ""}
+        {prog && prog.watched.length > 0 ? ` • ✓ ${prog.watched.length}` : ""}
+      </p>
     </a>
   );
 }
@@ -61,6 +65,46 @@ export function Row({ title: t, items, ranked }: { title: string; items: Anime[]
             {a ? <Card a={a as Anime} rank={ranked ? i + 1 : undefined} /> : <CardSkeleton />}
           </div>
         ))}
+      </div>
+    </section>
+  );
+}
+
+/** Baris "Lanjut Nonton" — anime yang progresnya pernah kamu tandai */
+export function ContinueRow() {
+  const prog = useProgressAll();
+  const items = Object.values(prog)
+    .filter(i => i.watched.length > 0)
+    .sort((a, b) => b.updated - a.updated)
+    .slice(0, 8);
+
+  if (items.length === 0) return null;
+
+  return (
+    <section className="mt-8">
+      <h2 className="mb-3 text-lg font-bold">⏳ Lanjut Nonton</h2>
+      <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+        {items.map(i => {
+          const pct = Math.min(100, Math.round((i.watched.length / Math.max(1, i.total)) * 100));
+          const next = Array.from({ length: i.total }, (_, k) => k + 1).find(n => !i.watched.includes(n));
+          return (
+            <div key={i.id} className="fade-up w-[42%] min-w-[150px] max-w-[190px] shrink-0 rounded-2xl border border-white/10 bg-white/5 p-2">
+              <a href={`#/anime/${i.id}`} className="flex gap-2.5">
+                <img src={i.cover} alt={i.title} loading="lazy" className="h-20 w-14 shrink-0 rounded-lg object-cover" />
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 text-xs font-semibold leading-snug">{i.title}</p>
+                  <p className="mt-1 text-[11px] text-white/50">
+                    {i.watched.length}/{i.total || "?"} ep{next ? ` • lanjut Ep ${next}` : " • tamat ✓"}
+                  </p>
+                </div>
+              </a>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600" style={{ width: `${pct}%` }} />
+              </div>
+              <button onClick={() => clearProgress(i.id)} className="mt-1.5 text-[10px] text-white/35">hapus progres</button>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
