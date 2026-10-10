@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Anime, getHome, seasonLabel, currentSeason, title, statusLabel } from "../api";
-import { ErrorBox, Row } from "../components/Card";
+import { ContinueRow, ErrorBox, Row } from "../components/Card";
 
 type Data = Awaited<ReturnType<typeof getHome>>;
 
@@ -37,6 +37,8 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      <ContinueRow />
 
       <Row title="🔥 Sedang Trending" items={data?.trending ?? null} />
       <Row title={`🍁 Populer ${seasonLabel(season, year)}`} items={data?.seasonal ?? null} />
