@@ -168,6 +168,53 @@ export const statusLabel = (s: string | null) => (s ? STATUS[s] ?? s : "-");
 export const seasonLabel = (s: string | null, y: number | null) => (s ? `${SEASON[s] ?? s} ${y ?? ""}` : y ? String(y) : "-");
 export const sourceLabel = (s: string | null) => (s ? SOURCE[s] ?? s : "-");
 
+// ---------- Pemutar episode (YouTube kanal RESMI saja) ----------
+// Hanya video dari kanal pemegang lisensi yang boleh diputar, supaya tetap legal.
+const OFFICIAL_CHANNEL =
+  /(muse indonesia|muse asia|muse malaysia|muse philippines|ani-one indonesia|ani-one asia|^ani-one$|gundaminfo|tms animation|toho animation)/i;
+
+export interface YtVideo { id: string; title: string; channel: string }
+
+const ytCache = new Map<string, YtVideo | null>();
+
+/** Cari episode di YouTube, hanya dari kanal resmi. Butuh YouTube Data API key. */
+export async function findOfficialEpisode(animeTitle: string, ep: number, key: string): Promise<YtVideo | null> {
+  const q = `${animeTitle} episode ${ep}`;
+  if (ytCache.has(q)) return ytCache.get(q) ?? null;
+
+  const url = "https://www.googleapis.com/youtube/v3/search"
+    + `?part=snippet&type=video&maxResults=10&videoEmbeddable=true&videoSyndicated=true`
+    + `&q=${encodeURIComponent(q)}&key=${encodeURIComponent(key)}`;
+
+  const res = await fetch(url);
+  const json = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    const reason = json?.error?.errors?.[0]?.reason ?? json?.error?.message ?? `HTTP ${res.status}`;
+    if (res.status === 400 || res.status === 403) throw new Error("Kunci YouTube API tidak valid atau kuotanya habis.");
+    if (res.status === 429) throw new Error("Terlalu banyak permintaan ke YouTube. Coba sebentar lagi.");
+    throw new Error(`Gagal mencari di YouTube: ${reason}`);
+  }
+
+  const vids = ((json?.items ?? []) as {
+    id?: { videoId?: string }; snippet?: { title?: string; channelTitle?: string };
+  }[])
+    .map(i => ({ id: i.id?.videoId ?? "", title: i.snippet?.title ?? "", channel: i.snippet?.channelTitle ?? "" }))
+    .filter(v => v.id && OFFICIAL_CHANNEL.test(v.channel));
+
+  const num = new RegExp(`(episode\\s*0*${ep}\\b|\\b0*${ep}\\b)`);
+  const pick = vids.find(v => num.test(v.title)) ?? vids[0] ?? null;
+  const out = pick ? { id: pick.id, title: pick.title, channel: pick.channel } : null;
+
+  ytCache.set(q, out);
+  return out;
+}
+
+/** Link pencarian YouTube (cadangan kalau API key belum dipasang / video tidak ada) */
+export const youtubeSearch = (animeTitle: string, ep?: number) =>
+  "https://www.youtube.com/results?search_query=" +
+  encodeURIComponent(`${animeTitle}${ep ? ` episode ${ep}` : ""} subtitle indonesia`);
+
 const BULAN = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 export const dateLabel = (d: { year: number | null; month: number | null; day: number | null }) =>
   d.year ? [d.day, d.month ? BULAN[d.month - 1] : null, d.year].filter(Boolean).join(" ") : "-";
