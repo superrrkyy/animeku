@@ -27,6 +27,9 @@ export interface AnimeDetail extends Anime {
   trailer: { id: string; site: string } | null;
   characters: { edges: { role: string; node: { id: number; name: { full: string }; image: { medium: string } } }[] };
   recommendations: { nodes: { mediaRecommendation: Anime | null }[] };
+  // link episode ke situs streaming RESMI (Crunchyroll, Netflix, dst) — bukan video di server kita
+  streamingEpisodes: { title: string | null; thumbnail: string | null; url: string | null; site: string | null }[] | null;
+  externalLinks: { site: string; url: string; type: string | null }[] | null;
 }
 
 export interface Airing {
@@ -103,6 +106,8 @@ export async function getDetail(id: number) {
       trailer { id site }
       characters(perPage: 10, sort: [ROLE, RELEVANCE]) { edges { role node { id name { full } image { medium } } } }
       recommendations(perPage: 10, sort: RATING_DESC) { nodes { mediaRecommendation { ${FIELDS} } } }
+      streamingEpisodes { title thumbnail url site }
+      externalLinks { site url type }
     }
   }`;
   const d = await gql<{ Media: AnimeDetail }>(q, { id });
@@ -130,6 +135,17 @@ export async function getSchedule(from: number, to: number) {
 
 // ---------- Helper tampilan ----------
 export const title = (a: Anime) => a.title.english || a.title.romaji;
+
+// "Episode 12 - Judulnya" -> 12
+export function epNo(t: string | null, fallback = 0): number {
+  const m = /episode\s*(\d+)/i.exec(t ?? "");
+  return m ? +m[1] : fallback;
+}
+
+// "Episode 12 - Judulnya" -> "Judulnya"
+export function epTitle(t: string | null): string {
+  return (t ?? "").replace(/^\s*episode\s*\d+\s*[-–:•]?\s*/i, "").trim();
+}
 
 export const GENRES = [
   "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Mecha", "Music",
