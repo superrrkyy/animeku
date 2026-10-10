@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import {
-  AnimeDetail, countdown, dateLabel, epNo, epTitle, fmt, getDetail, seasonLabel, sourceLabel, statusLabel, title,
+  AnimeDetail, YtVideo, countdown, dateLabel, epNo, epTitle, findOfficialEpisode, fmt, getDetail,
+  seasonLabel, sourceLabel, statusLabel, title, youtubeSearch,
 } from "../api";
 import { Card, ErrorBox } from "../components/Card";
-import { clearProgress, markAll, markUpTo, toggleEpisode, toggleFav, useFavs, useProgress } from "../store";
+import {
+  clearProgress, markAll, markUpTo, setYtKey, toggleEpisode, toggleFav, useFavs, useProgress, useYtKey,
+} from "../store";
 
 export default function Detail({ id }: { id: number }) {
   const [a, setA] = useState<AnimeDetail | null>(null);
@@ -190,8 +193,33 @@ function Episodes({ a }: { a: AnimeDetail }) {
   const p = useProgress(a.id);
   const watched = new Set(p?.watched ?? []);
   const [showAll, setShowAll] = useState(false);
+  const [player, setPlayer] = useState<{ n: number; v: YtVideo } | null>(null);
+  const [busy, setBusy] = useState<number | null>(null);
+  const [msg, setMsg] = useState("");
+  const [showKey, setShowKey] = useState(false);
+  const [keyInput, setKeyInput] = useState("");
+  const ytKey = useYtKey();
 
   const meta = { id: a.id, title: title(a), cover: a.coverImage.large, total: a.episodes ?? 0 };
+
+  /** cari episode di kanal YouTube resmi lalu putar di halaman */
+  async function play(n: number) {
+    if (!ytKey) {
+      setShowKey(true);
+      setMsg("Masukkan kunci YouTube Data API dulu supaya pemutar bisa mencari episode resmi.");
+      return;
+    }
+    setBusy(n); setMsg("");
+    try {
+      const v = await findOfficialEpisode(title(a), n, ytKey);
+      if (v) { setPlayer({ n, v }); setMsg(""); }
+      else setMsg(`Episode ${n} belum ada di kanal resmi YouTube. Pakai link di bawah untuk nonton di situs resminya.`);
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Gagal mencari video.");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   const eps = (a.streamingEpisodes ?? [])
     .map((e, i) => ({ n: epNo(e.title, i + 1), t: epTitle(e.title), thumb: e.thumbnail, url: e.url, site: e.site }))
@@ -224,18 +252,69 @@ function Episodes({ a }: { a: AnimeDetail }) {
 
       {nextN != null && (
         <div className="mt-3 flex gap-2">
+          <button onClick={() => play(nextN)} disabled={busy !== null}
+            className="flex-1 rounded-xl bg-gradient-to-r from-pink-500 to-violet-600 py-2.5 text-sm font-semibold transition active:scale-95 disabled:opacity-60">
+            {busy === nextN ? "Mencari…" : `▶ Putar Episode ${nextN}`}
+          </button>
           {nextLink && (
             <a href={nextLink.url} target="_blank" rel="noopener"
-              className="flex-1 rounded-xl bg-gradient-to-r from-pink-500 to-violet-600 py-2.5 text-center text-sm font-semibold transition active:scale-95">
-              ▶ Nonton Episode {nextN}
+              className="rounded-xl bg-white/10 px-3 py-2.5 text-center text-sm font-semibold transition active:scale-95">
+              Situs resmi ↗
             </a>
           )}
           <button onClick={() => markUpTo(meta, nextN)}
-            className="rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold transition active:scale-95">
-            ✓ s/d Ep {nextN}
+            className="rounded-xl bg-white/10 px-3 py-2.5 text-sm font-semibold transition active:scale-95">
+            ✓ s/d {nextN}
           </button>
         </div>
       )}
+
+      {/* pemutar episode (hanya video dari kanal resmi) */}
+      {player && (
+        <div className="mt-3 overflow-hidden rounded-xl border border-emerald-400/30 bg-black/60">
+          <div className="flex items-center justify-between gap-2 px-3 py-2">
+            <span className="truncate text-xs font-semibold">▶ Episode {player.n} · {player.v.channel}</span>
+            <button onClick={() => setPlayer(null)} className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-xs">✕ Tutup</button>
+          </div>
+          <div className="aspect-video w-full">
+            <iframe className="h-full w-full"
+              src={`https://www.youtube-nocookie.com/embed/${player.v.id}?autoplay=1&rel=0`}
+              title={`Episode ${player.n}`} allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
+          </div>
+          <p className="px-3 py-2 text-[10px] leading-relaxed text-white/40">
+            Sumber: kanal resmi <b>{player.v.channel}</b> di YouTube. Kalau video tidak bisa diputar,
+            berarti pemiliknya membatasi pemutaran di situs lain.
+          </p>
+        </div>
+      )}
+
+      {msg && <p className="mt-2 rounded-xl bg-white/5 p-2.5 text-[11px] leading-relaxed text-white/70">{msg}</p>}
+
+      {/* pengaturan kunci YouTube API */}
+      <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
+        <button onClick={() => setShowKey(s => !s)} className="text-xs font-semibold">
+          ⚙️ {ytKey ? "Kunci YouTube API tersimpan ✓" : "Atur kunci YouTube API (untuk pemutar)"}
+        </button>
+        {showKey && (
+          <div className="mt-2">
+            <input value={keyInput} onChange={e => setKeyInput(e.target.value)} placeholder="AIza… (kunci YouTube Data API)"
+              autoComplete="off" spellCheck={false}
+              className="w-full rounded-lg bg-black/50 px-3 py-2 text-xs ring-1 ring-white/15 outline-none focus:ring-pink-400" />
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button onClick={() => { setYtKey(keyInput); setMsg(keyInput.trim() ? "Kunci tersimpan di perangkat ini." : "Kunci dihapus."); }}
+                className="rounded-lg bg-gradient-to-r from-pink-500 to-violet-600 px-3 py-1.5 text-xs font-semibold">Simpan</button>
+              <button onClick={() => { setYtKey(""); setKeyInput(""); setMsg("Kunci dihapus."); }}
+                className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold">Hapus</button>
+              <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener"
+                className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold">Buat kunci ↗</a>
+            </div>
+            <p className="mt-2 text-[10px] leading-relaxed text-white/40">
+              Gratis: 10.000 unit/hari (≈100 pencarian episode). Kunci hanya tersimpan di browser kamu,
+              tidak dikirim ke mana pun. Sebaiknya batasi kunci agar hanya bisa dipakai YouTube Data API.
+            </p>
+          </div>
+        )}
+      </div>
 
       {eps.length > 0 ? (
         <>
@@ -256,6 +335,10 @@ function Episodes({ a }: { a: AnimeDetail }) {
                     <p className="line-clamp-2 text-xs text-white/60">{e.t || `Buka di ${e.site ?? "situs resmi"}`}</p>
                     <p className="mt-0.5 text-[10px] uppercase tracking-wide text-white/35">{e.site}</p>
                   </a>
+                  <button onClick={() => play(e.n)} disabled={busy !== null} aria-label={`Putar episode ${e.n}`}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 text-sm transition active:scale-90 disabled:opacity-50">
+                    {busy === e.n ? "⟳" : "▶"}
+                  </button>
                   <button onClick={() => toggleEpisode(meta, e.n)} aria-label={`Episode ${e.n}`}
                     className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-base transition active:scale-90 ${done ? "bg-emerald-500 font-black text-black" : "bg-white/10"}`}>
                     {done ? "✓" : "○"}
@@ -276,6 +359,10 @@ function Episodes({ a }: { a: AnimeDetail }) {
             Setiap episode membuka <b>situs streaming resmi</b> (Crunchyroll, Netflix, Bilibili TV, dll).
             AnimeKu tidak menyimpan maupun menayangkan video apa pun.
           </p>
+          <a href={youtubeSearch(title(a), nextN)} target="_blank" rel="noopener"
+            className="mt-1.5 inline-block text-[11px] font-semibold text-pink-400">
+            🔎 Cari episode di YouTube ↗
+          </a>
         </>
       ) : (
         <>
