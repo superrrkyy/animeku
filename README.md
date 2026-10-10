@@ -2,7 +2,7 @@
 
 <img src="assets/banner.svg" width="100%" alt="AnimeKu" />
 
-**Katalog anime berbahasa Indonesia** — temukan anime trending, cek jadwal tayang mingguan, tonton trailer, dan simpan favoritmu.
+**Katalog anime berbahasa Indonesia** — temukan anime trending, cek jadwal tayang mingguan, lihat daftar episode, buka di situs nonton resmi, dan lacak progres nontonmu.
 
 <a href="https://superrrkyy.github.io/animeku/"><img src="https://img.shields.io/badge/▶_Buka_AnimeKu-ec4899?style=for-the-badge" alt="Demo" /></a>
 
@@ -36,11 +36,15 @@
 **📖 Halaman Detail**
 - Banner, skor, jumlah penonton & favorit
 - ▶️ Trailer YouTube langsung di halaman
+- **▶️ Tonton di** — tombol ke situs streaming resmi (Crunchyroll, Netflix, Bilibili TV, dll)
+- **📺 Daftar Episode** — judul tiap episode + thumbnail; klik untuk membuka episode di situs resminya
+- **✅ Pelacak progres** — centang episode yang sudah ditonton, simpan otomatis di perangkat
 - Sinopsis, informasi lengkap (studio, musim, durasi, sumber)
 - 👥 Karakter utama & ✨ rekomendasi anime serupa
 
 **❤️ Favorit**
 - Simpan anime favorit, tersimpan otomatis di perangkat
+- ⏳ **Lanjut Nonton** di beranda: lanjut dari episode yang belum kamu tandai
 
 **📱 Lainnya**
 - Navigasi bawah ala aplikasi di HP
