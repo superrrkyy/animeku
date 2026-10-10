@@ -34,6 +34,27 @@ function emitProg() {
   listeners.forEach(l => l());
 }
 
+function notify() {
+  listeners.forEach(l => l());
+}
+
+// ---------- Kunci YouTube Data API (opsional) ----------
+const KKEY = "animeku_ytkey";
+let ytKey: string = (() => { try { return localStorage.getItem(KKEY) ?? ""; } catch { return ""; } })();
+
+export function useYtKey() {
+  return useSyncExternalStore(subscribe, () => ytKey);
+}
+
+export function setYtKey(k: string) {
+  ytKey = k.trim();
+  try {
+    if (ytKey) localStorage.setItem(KKEY, ytKey);
+    else localStorage.removeItem(KKEY);
+  } catch { /* abaikan */ }
+  notify();
+}
+
 function subscribe(cb: () => void) {
   listeners.add(cb);
   return () => { listeners.delete(cb); };
